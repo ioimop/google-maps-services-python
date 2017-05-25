@@ -26,24 +26,27 @@ from datetime import datetime
 from datetime import timedelta
 import functools
 import hashlib
+import string
 import hmac
 import re
-import requests
 import random
 import time
 
-import googlemaps
+import aiohttp
 
-try: # Python 3
+import aiogmaps
+
+try:  # Python 3
     from urllib.parse import urlencode
-except ImportError: # Python 2
+except ImportError:  # Python 2
     from urllib import urlencode
 
 
-_USER_AGENT = "GoogleGeoApiClientPython/%s" % googlemaps.__version__
+_USER_AGENT = "GoogleGeoApiClientPython/%s" % aiogmaps.__version__
 _DEFAULT_BASE_URL = "https://maps.googleapis.com"
 
 _RETRIABLE_STATUSES = set([500, 503, 504])
+
 
 class Client(object):
     """Performs requests to the Google Maps API web services."""
@@ -75,8 +78,8 @@ class Client(object):
         :type timeout: int
 
         :param connect_timeout: Connection timeout for HTTP requests, in
-            seconds. You should specify read_timeout in addition to this option.
-            Note that this requires requests >= 2.4.0.
+            seconds. You should specify read_timeout in addition to this
+            option. Note that this requires requests >= 2.4.0.
         :type connect_timeout: int
 
         :param read_timeout: Read timeout for HTTP requests, in
@@ -117,11 +120,13 @@ class Client(object):
                 raise ValueError("The channel argument must be used with a "
                                  "client ID")
             if not re.match("^[a-zA-Z0-9._-]*$", channel):
-                raise ValueError("The channel argument must be an ASCII "
+                raise ValueError(
+                    "The channel argument must be an ASCII "
                     "alphanumeric string. The period (.), underscore (_)"
-                    "and hyphen (-) characters are allowed.")
+                    "and hyphen (-) characters are allowed."
+                )
 
-        self.session = requests.Session()
+        # self.session = aiohttp.ClientSession()
         self.key = key
 
         if timeout and (connect_timeout or read_timeout):
@@ -130,8 +135,9 @@ class Client(object):
 
         if connect_timeout and read_timeout:
             # Check that the version of requests is >= 2.4.0
-            chunks = requests.__version__.split(".")
-            if int(chunks[0]) < 2 or (int(chunks[0]) == 2 and int(chunks[1]) < 4):
+            chunks = aiohttp.__version__.split(".")
+            if int(chunks[0]) < 2 or \
+                    (int(chunks[0]) == 2 and int(chunks[1]) < 4):
                 raise NotImplementedError("Connect/Read timeouts require "
                                           "requests v2.4.0 or higher")
             self.timeout = (connect_timeout, read_timeout)
@@ -152,9 +158,10 @@ class Client(object):
         self.queries_per_second = queries_per_second
         self.sent_times = collections.deque("", queries_per_second)
 
-    def _request(self, url, params, first_request_time=None, retry_counter=0,
-             base_url=_DEFAULT_BASE_URL, accepts_clientid=True,
-             extract_body=None, requests_kwargs=None, post_json=None):
+    async def _request(self, url, params, first_request_time=None,
+                       retry_counter=0, base_url=_DEFAULT_BASE_URL,
+                       accepts_clientid=True, extract_body=None,
+                       requests_kwargs=None, post_json=None):
         """Performs HTTP GET/POST with credentials, returning the body as
         JSON.
 
@@ -168,20 +175,21 @@ class Client(object):
             retries have occurred).
         :type first_request_time: datetime.datetime
 
-        :param retry_counter: The number of this retry, or zero for first attempt.
+        :param retry_counter: The number of this retry, or zero for first
+            attempt.
         :type retry_counter: int
 
         :param base_url: The base URL for the request. Defaults to the Maps API
             server. Should not have a trailing slash.
         :type base_url: string
 
-        :param accepts_clientid: Whether this call supports the client/signature
-            params. Some APIs require API keys (e.g. Roads).
+        :param accepts_clientid: Whether this call supports the
+            client/signatur eparams. Some APIs require API keys (e.g. Roads).
         :type accepts_clientid: bool
 
-        :param extract_body: A function that extracts the body from the request.
-            If the request was not successful, the function should raise a
-            googlemaps.HTTPError or googlemaps.ApiError as appropriate.
+        :param extract_body: A function that extracts the body from the
+            request. If the request was not successful, the function should
+            raise a aiogmaps.HTTPError or aiogmaps.ApiError as appropriate.
         :type extract_body: function
 
         :param requests_kwargs: Same extra keywords arg for requests as per
@@ -200,7 +208,7 @@ class Client(object):
 
         elapsed = datetime.now() - first_request_time
         if elapsed > self.retry_timeout:
-            raise googlemaps.exceptions.Timeout()
+            raise aiogmaps.exceptions.Timeout()
 
         if retry_counter > 0:
             # 0.5 * (1.5 ^ i) is an increased sleep time of 1.5x per iteration,
@@ -219,24 +227,26 @@ class Client(object):
         final_requests_kwargs = dict(self.requests_kwargs, **requests_kwargs)
 
         # Determine GET/POST.
-        requests_method = self.session.get
-        if post_json is not None:
-            requests_method = self.session.post
-            final_requests_kwargs["json"] = post_json
+        async with aiohttp.ClientSession() as session:
+            requests_method = session.get
+            if post_json is not None:
+                requests_method = self.session.post
+                final_requests_kwargs["json"] = post_json
 
         try:
-            response = requests_method(base_url + authed_url,
-                                       **final_requests_kwargs)
-        except requests.exceptions.Timeout:
-            raise googlemaps.exceptions.Timeout()
+            response = await requests_method(
+                base_url + authed_url,
+                **final_requests_kwargs)
+        except aiohttp.ServerTimeoutError:
+            raise aiogmaps.exceptions.Timeout()
         except Exception as e:
-            raise googlemaps.exceptions.TransportError(e)
+            raise aiogmaps.exceptions.TransportError(e)
 
         if response.status_code in _RETRIABLE_STATUSES:
             # Retry request.
-            return self._request(url, params, first_request_time,
-                                 retry_counter + 1, base_url, accepts_clientid,
-                                 extract_body, requests_kwargs, post_json)
+            return await self._request(
+                url, params, first_request_time, retry_counter + 1, base_url,
+                accepts_clientid, extract_body, requests_kwargs, post_json)
 
         # Check if the time of the nth previous query (where n is
         # queries_per_second) is under a second ago - if so, sleep for
@@ -248,38 +258,39 @@ class Client(object):
 
         try:
             if extract_body:
-                result = extract_body(response)
+                result = await extract_body(response)
             else:
-                result = self._get_body(response)
+                result = await self._get_body(response)
             self.sent_times.append(time.time())
             return result
-        except googlemaps.exceptions._RetriableRequest:
+        except aiogmaps.exceptions._RetriableRequest:
             # Retry request.
-            return self._request(url, params, first_request_time,
-                                 retry_counter + 1, base_url, accepts_clientid,
-                                 extract_body, requests_kwargs, post_json)
+            return await self._request(
+                url, params, first_request_time, retry_counter + 1, base_url,
+                accepts_clientid, extract_body, requests_kwargs, post_json)
 
-    def _get(self, *args, **kwargs):  # Backwards compatibility.
-        return self._request(*args, **kwargs)
+    async def _get(self, *args, **kwargs):  # Backwards compatibility.
+        return await self._request(*args, **kwargs)
 
-    def _get_body(self, response):
-        if response.status_code != 200:
-            raise googlemaps.exceptions.HTTPError(response.status_code)
+    async def _get_body(self, response):
+        if response.status != 200:
+            raise aiogmaps.exceptions.HTTPError(response.status)
 
-        body = response.json()
+        body = await response.json()
 
         api_status = body["status"]
         if api_status == "OK" or api_status == "ZERO_RESULTS":
             return body
 
         if api_status == "OVER_QUERY_LIMIT":
-            raise googlemaps.exceptions._RetriableRequest()
+            raise aiogmaps.exceptions._RetriableRequest()
 
         if "error_message" in body:
-            raise googlemaps.exceptions.ApiError(api_status,
-                    body["error_message"])
+            raise aiogmaps.exceptions.ApiError(
+                api_status, body["error_message"]
+            )
         else:
-            raise googlemaps.exceptions.ApiError(api_status)
+            raise aiogmaps.exceptions.ApiError(api_status)
 
     def _generate_auth_url(self, path, params, accepts_clientid):
         """Returns the path and query string portion of the request URL, first
@@ -300,7 +311,7 @@ class Client(object):
         if type(params) is dict:
             params = sorted(dict(extra_params, **params).items())
         else:
-            params = sorted(extra_params.items()) + params[:] # Take a copy.
+            params = sorted(extra_params.items()) + params[:]  # Take a copy.
 
         if accepts_clientid and self.client_id and self.client_secret:
             if self.channel:
@@ -315,29 +326,29 @@ class Client(object):
             params.append(("key", self.key))
             return path + "?" + urlencode_params(params)
 
-        raise ValueError("Must provide API key for this API. It does not accept "
-                         "enterprise credentials.")
+        raise ValueError("Must provide API key for this API. It does not "
+                         "accept enterprise credentials.")
 
 
-from googlemaps.directions import directions
-from googlemaps.distance_matrix import distance_matrix
-from googlemaps.elevation import elevation
-from googlemaps.elevation import elevation_along_path
-from googlemaps.geocoding import geocode
-from googlemaps.geocoding import reverse_geocode
-from googlemaps.geolocation import geolocate
-from googlemaps.timezone import timezone
-from googlemaps.roads import snap_to_roads
-from googlemaps.roads import nearest_roads
-from googlemaps.roads import speed_limits
-from googlemaps.roads import snapped_speed_limits
-from googlemaps.places import places
-from googlemaps.places import places_nearby
-from googlemaps.places import places_radar
-from googlemaps.places import place
-from googlemaps.places import places_photo
-from googlemaps.places import places_autocomplete
-from googlemaps.places import places_autocomplete_query
+from aiogmaps.directions import directions
+from aiogmaps.distance_matrix import distance_matrix
+from aiogmaps.elevation import elevation
+from aiogmaps.elevation import elevation_along_path
+from aiogmaps.geocoding import geocode
+from aiogmaps.geocoding import reverse_geocode
+from aiogmaps.geolocation import geolocate
+from aiogmaps.timezone import timezone
+from aiogmaps.roads import snap_to_roads
+from aiogmaps.roads import nearest_roads
+from aiogmaps.roads import speed_limits
+from aiogmaps.roads import snapped_speed_limits
+from aiogmaps.places import places
+from aiogmaps.places import places_nearby
+from aiogmaps.places import places_radar
+from aiogmaps.places import place
+from aiogmaps.places import places_photo
+from aiogmaps.places import places_autocomplete
+from aiogmaps.places import places_autocomplete_query
 
 
 def make_api_method(func):
@@ -415,26 +426,40 @@ def urlencode_params(params):
     # Secondly, unquote unreserved chars which are incorrectly quoted
     # by urllib.urlencode, causing invalid auth signatures. See GH #72
     # for more info.
-    return requests.utils.unquote_unreserved(urlencode(params))
+    return unquote_unreserved(urlencode(params))
 
 
-try:
-    unicode
-    # NOTE(cbro): `unicode` was removed in Python 3. In Python 3, NameError is
-    # raised here, and caught below.
+def normalize_for_urlencode(value):
+    """(Python 3) No-op."""
+    # urlencode in Python 3 handles all the types we are passing it.
+    return value
 
-    def normalize_for_urlencode(value):
-        """(Python 2) Converts the value to a `str` (raw bytes)."""
-        if isinstance(value, unicode):
-            return value.encode('utf8')
+# The unreserved URI characters (RFC 3986)
+UNRESERVED_SET = frozenset(
+    string.digits + string.ascii_letters + "-._~"
+)
 
-        if isinstance(value, str):
-            return value
 
-        return normalize_for_urlencode(str(value))
+def unquote_unreserved(uri):
+    """Un-escape any percent-escape sequences in a URI that are unreserved
+    characters. This leaves all reserved, illegal and non-ASCII bytes encoded.
 
-except NameError:
-    def normalize_for_urlencode(value):
-        """(Python 3) No-op."""
-        # urlencode in Python 3 handles all the types we are passing it.
-        return value
+    :rtype: str
+    """
+    parts = uri.split('%')
+    for i in range(1, len(parts)):
+        h = parts[i][0:2]
+        if len(h) == 2 and h.isalnum():
+            try:
+                c = chr(int(h, 16))
+            except ValueError:
+                raise aiogmaps.exceptions.InvalidURL(
+                    "Invalid percent-escape sequence: '%s'" % h)
+
+            if c in UNRESERVED_SET:
+                parts[i] = c + parts[i][2:]
+            else:
+                parts[i] = '%' + parts[i]
+        else:
+            parts[i] = '%' + parts[i]
+    return ''.join(parts)

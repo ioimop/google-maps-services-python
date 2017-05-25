@@ -17,7 +17,7 @@
 
 """Performs requests to the Google Maps Directions API."""
 
-from googlemaps import convert
+from aiogmaps import convert
 
 from datetime import datetime
 

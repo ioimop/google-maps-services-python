@@ -16,11 +16,11 @@
 #
 
 """Performs requests to the Google Maps Geocoding API."""
-from googlemaps import convert
+from aiogmaps import convert
 
 
-def geocode(client, address=None, components=None, bounds=None, region=None,
-            language=None):
+async def geocode(client, address=None, components=None, bounds=None,
+                  region=None, language=None):
     """
     Geocoding is the process of converting addresses
     (like ``"1600 Amphitheatre Parkway, Mountain View, CA"``) into geographic
@@ -34,8 +34,8 @@ def geocode(client, address=None, components=None, bounds=None, region=None,
         geocode, for example: ``{'administrative_area': 'TX','country': 'US'}``
     :type components: dict
 
-    :param bounds: The bounding box of the viewport within which to bias geocode
-        results more prominently.
+    :param bounds: The bounding box of the viewport within which to bias
+        geocode results more prominently.
     :type bounds: string or dict with northeast and southwest keys.
 
     :param region: The region code, specified as a ccTLD ("top-level domain")
@@ -65,14 +65,14 @@ def geocode(client, address=None, components=None, bounds=None, region=None,
     if language:
         params["language"] = language
 
-    return client._request("/maps/api/geocode/json", params)["results"]
+    return await client._request("/maps/api/geocode/json", params)["results"]
 
 
-def reverse_geocode(client, latlng, result_type=None, location_type=None,
-                    language=None):
+async def reverse_geocode(client, latlng, result_type=None, location_type=None,
+                          language=None):
     """
-    Reverse geocoding is the process of converting geographic coordinates into a
-    human-readable address.
+    Reverse geocoding is the process of converting geographic coordinates into
+    a human-readable address.
 
     :param latlng: The latitude/longitude value or place_id for which you wish
         to obtain the closest, human-readable address.
@@ -106,4 +106,4 @@ def reverse_geocode(client, latlng, result_type=None, location_type=None,
     if language:
         params["language"] = language
 
-    return client._request("/maps/api/geocode/json", params)["results"]
+    return await client._request("/maps/api/geocode/json", params)["results"]

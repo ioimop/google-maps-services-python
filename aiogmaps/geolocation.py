@@ -16,18 +16,18 @@
 #
 
 """Performs requests to the Google Maps Geolocation API."""
-from googlemaps import exceptions
+from aiogmaps import exceptions
 
 
 _GEOLOCATION_BASE_URL = "https://www.googleapis.com"
 
 
-def _geolocation_extract(response):
+async def _geolocation_extract(response):
     """
     Mimics the exception handling logic in ``client._get_body``, but
     for geolocation which uses a different response format.
     """
-    body = response.json()
+    body = await response.json()
     if response.status_code in (200, 404):
         return body
     elif response.status_code == 403:
@@ -40,9 +40,11 @@ def _geolocation_extract(response):
         raise exceptions.ApiError(response.status_code, error)
 
 
-def geolocate(client, home_mobile_country_code=None,
-              home_mobile_network_code=None, radio_type=None, carrier=None,
-              consider_ip=None, cell_towers=None, wifi_access_points=None):
+async def geolocate(
+    client, home_mobile_country_code=None, home_mobile_network_code=None,
+    radio_type=None, carrier=None, consider_ip=None, cell_towers=None,
+    wifi_access_points=None
+):
     """
     The Google Maps Geolocation API returns a location and accuracy
     radius based on information about cell towers and WiFi nodes given.
@@ -99,7 +101,9 @@ def geolocate(client, home_mobile_country_code=None,
     if wifi_access_points is not None:
         params["wifiAccessPoints"] = wifi_access_points
 
-    return client._request("/geolocation/v1/geolocate", {},  # No GET params
-                           base_url=_GEOLOCATION_BASE_URL,
-                           extract_body=_geolocation_extract,
-                           post_json=params)
+    return await client._request(
+        "/geolocation/v1/geolocate", {},  # No GET params
+        base_url=_GEOLOCATION_BASE_URL,
+        extract_body=_geolocation_extract,
+        post_json=params
+    )

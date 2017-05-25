@@ -22,14 +22,14 @@ from datetime import timedelta
 import responses
 import time
 
-import googlemaps
+import aiogmaps
 import test as _test
 
 class DirectionsTest(_test.TestCase):
 
     def setUp(self):
         self.key = 'AIzaasdf'
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_simple_directions(self):
@@ -74,7 +74,7 @@ class DirectionsTest(_test.TestCase):
     def test_transit_without_time(self):
         # With mode of transit, we need a departure_time or an
         # arrival_time specified
-        with self.assertRaises(googlemaps.exceptions.ApiError):
+        with self.assertRaises(aiogmaps.exceptions.ApiError):
             self.client.directions("Sydney Town Hall", "Parramatta, NSW",
                                   mode="transit")
 

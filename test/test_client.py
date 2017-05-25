@@ -21,22 +21,27 @@
 import responses
 import time
 
-import googlemaps
-from googlemaps import client as _client
+import aiogmaps
+from aiogmaps import client as _client
 import test as _test
 import requests
 
+from aiohttp.test_utils import unittest_run_loop
+
+
 class ClientTest(_test.TestCase):
 
-    def test_no_api_key(self):
+    @unittest_run_loop
+    async def test_no_api_key(self):
         with self.assertRaises(Exception):
-            client = googlemaps.Client()
-            client.directions("Sydney", "Melbourne")
+            client = aiogmaps.Client()
+            await client.directions("Sydney", "Melbourne")
 
-    def test_invalid_api_key(self):
+    @unittest_run_loop
+    async def test_invalid_api_key(self):
         with self.assertRaises(Exception):
-            client = googlemaps.Client(key="Invalid key.")
-            client.directions("Sydney", "Melbourne")
+            client = aiogmaps.Client(key="Invalid key.")
+            await client.directions("Sydney", "Melbourne")
 
     def test_urlencode(self):
         # See GH #72.
@@ -57,8 +62,10 @@ class ClientTest(_test.TestCase):
                           body='{"status":"OK","results":[]}',
                           status=200,
                           content_type="application/json")
-        client = googlemaps.Client(key="AIzaasdf",
-                                   queries_per_second=queries_per_second)
+        client = aiogmaps.Client(
+            key="AIzaasdf",
+            queries_per_second=queries_per_second
+        )
         start = time.time()
         for _ in query_range:
             client.geocode("Sesame St.")
@@ -73,7 +80,7 @@ class ClientTest(_test.TestCase):
                       status=200,
                       content_type="application/json")
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client.geocode("Sesame St.")
 
         self.assertEqual(1, len(responses.calls))
@@ -89,7 +96,7 @@ class ClientTest(_test.TestCase):
                       status=200,
                       content_type="application/json")
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client.geocode("Sesame St.", extra_params={"foo": "bar"})
 
         self.assertEqual(1, len(responses.calls))
@@ -119,7 +126,7 @@ class ClientTest(_test.TestCase):
                       status=200,
                       content_type="application/json")
 
-        client = googlemaps.Client(client_id="foo", client_secret="a2V5")
+        client = aiogmaps.Client(client_id="foo", client_secret="a2V5")
         client.geocode("Sesame St.")
 
         self.assertEqual(1, len(responses.calls))
@@ -140,7 +147,7 @@ class ClientTest(_test.TestCase):
                       status=200,
                       content_type="application/json")
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client.geocode("Sesame St.")
 
         self.assertEqual(1, len(responses.calls))
@@ -164,7 +171,7 @@ class ClientTest(_test.TestCase):
                 content_type='application/json',
                 callback=request_callback())
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client.geocode("Sesame St.")
 
         self.assertEqual(2, len(responses.calls))
@@ -177,8 +184,8 @@ class ClientTest(_test.TestCase):
                       status=404,
                       content_type='application/json')
 
-        client = googlemaps.Client(key="AIzaasdf")
-        with self.assertRaises(googlemaps.exceptions.HTTPError) as e:
+        client = aiogmaps.Client(key="AIzaasdf")
+        with self.assertRaises(aiogmaps.exceptions.HTTPError) as e:
             client.geocode("Foo")
 
         self.assertEqual(e.exception.status_code, 404)
@@ -191,7 +198,7 @@ class ClientTest(_test.TestCase):
                       status=200,
                       content_type="application/json")
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client._get("/bar", {}, base_url="https://foo.com")
 
         self.assertEqual(1, len(responses.calls))
@@ -207,7 +214,7 @@ class ClientTest(_test.TestCase):
                       status=403,
                       content_type="application/json")
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         b = client._get("/bar", {}, extract_body=custom_extract)
         self.assertEqual(1, len(responses.calls))
         self.assertEqual("errormessage", b["error"])
@@ -229,25 +236,25 @@ class ClientTest(_test.TestCase):
                 content_type="application/json",
                 callback=request_callback())
 
-        client = googlemaps.Client(key="AIzaasdf")
+        client = aiogmaps.Client(key="AIzaasdf")
         client.geocode("Sesame St.")
 
         self.assertEqual(2, len(responses.calls))
 
     def test_channel_without_client_id(self):
         with self.assertRaises(ValueError):
-            client = googlemaps.Client(key="AIzaasdf", channel="mychannel")
+            client = aiogmaps.Client(key="AIzaasdf", channel="mychannel")
 
     def test_invalid_channel(self):
         # Cf. limitations here:
         # https://developers.google.com/maps/premium/reports
         # /usage-reports#channels
         with self.assertRaises(ValueError):
-            client = googlemaps.Client(client_id="foo", client_secret="a2V5",
+            client = aiogmaps.Client(client_id="foo", client_secret="a2V5",
                                        channel="auieauie$? ")
 
     def test_auth_url_with_channel(self):
-        client = googlemaps.Client(key="AIzaasdf",
+        client = aiogmaps.Client(key="AIzaasdf",
                                    client_id="foo",
                                    client_secret="a2V5",
                                    channel="MyChannel_1")
@@ -282,9 +289,9 @@ class ClientTest(_test.TestCase):
 
         requests.__version__ = '2.3.0'
         with self.assertRaises(NotImplementedError):
-            googlemaps.Client(**client_args_timeout)
-        googlemaps.Client(**client_args)
+            aiogmaps.Client(**client_args_timeout)
+        aiogmaps.Client(**client_args)
 
         requests.__version__ = '2.4.0'
-        googlemaps.Client(**client_args_timeout)
-        googlemaps.Client(**client_args)
+        aiogmaps.Client(**client_args_timeout)
+        aiogmaps.Client(**client_args)

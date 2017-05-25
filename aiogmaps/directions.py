@@ -15,47 +15,54 @@
 # the License.
 #
 
-"""Performs requests to the Google Maps Distance Matrix API."""
+"""Performs requests to the Google Maps Directions API."""
 
-from googlemaps import convert
-from googlemaps.convert import as_list
+from aiogmaps import convert
 
 
-def distance_matrix(client, origins, destinations,
-                    mode=None, language=None, avoid=None, units=None,
-                    departure_time=None, arrival_time=None, transit_mode=None,
-                    transit_routing_preference=None, traffic_model=None):
-    """ Gets travel distance and time for a matrix of origins and destinations.
+async def directions(
+    client, origin, destination, mode=None, waypoints=None, alternatives=False,
+    avoid=None, language=None, units=None, region=None, departure_time=None,
+    arrival_time=None, optimize_waypoints=False, transit_mode=None,
+    transit_routing_preference=None, traffic_model=None
+):
+    """Get directions between an origin point and a destination point.
 
-    :param origins: One or more locations and/or latitude/longitude values,
-        from which to calculate distance and time. If you pass an address as
-        a string, the service will geocode the string and convert it to a
-        latitude/longitude coordinate to calculate directions.
-    :type origins: a single location, or a list of locations, where a
-        location is a string, dict, list, or tuple
+    :param origin: The address or latitude/longitude value from which you wish
+        to calculate directions.
+    :type origin: string, dict, list, or tuple
 
-    :param destinations: One or more addresses and/or lat/lng values, to
-        which to calculate distance and time. If you pass an address as a
-        string, the service will geocode the string and convert it to a
-        latitude/longitude coordinate to calculate directions.
-    :type destinations: a single location, or a list of locations, where a
-        location is a string, dict, list, or tuple
+    :param destination: The address or latitude/longitude value from which
+        you wish to calculate directions.
+    :type destination: string, dict, list, or tuple
 
     :param mode: Specifies the mode of transport to use when calculating
-        directions. Valid values are "driving", "walking", "transit" or
-        "bicycling".
+        directions. One of "driving", "walking", "bicycling" or "transit"
     :type mode: string
+
+    :param waypoints: Specifies an array of waypoints. Waypoints alter a
+        route by routing it through the specified location(s).
+    :type waypoints: a single location, or a list of locations, where a
+        location is a string, dict, list, or tuple
+
+    :param alternatives: If True, more than one route may be returned in the
+        response.
+    :type alternatives: bool
+
+    :param avoid: Indicates that the calculated route(s) should avoid the
+        indicated features.
+    :type avoid: list or string
 
     :param language: The language in which to return results.
     :type language: string
 
-    :param avoid: Indicates that the calculated route(s) should avoid the
-        indicated features. Valid values are "tolls", "highways" or "ferries".
-    :type avoid: string
-
     :param units: Specifies the unit system to use when displaying results.
-        Valid values are "metric" or "imperial".
+        "metric" or "imperial"
     :type units: string
+
+    :param region: The region code, specified as a ccTLD ("top-level domain"
+        two-character value.
+    :type region: string
 
     :param departure_time: Specifies the desired time of departure.
     :type departure_time: int or datetime.datetime
@@ -65,6 +72,10 @@ def distance_matrix(client, origins, destinations,
         arrival_time.
     :type arrival_time: int or datetime.datetime
 
+    :param optimize_waypoints: Optimize the provided route by rearranging the
+        waypoints in a more efficient order.
+    :type optimize_waypoints: bool
+
     :param transit_mode: Specifies one or more preferred modes of transit.
         This parameter may only be specified for requests where the mode is
         transit. Valid values are "bus", "subway", "train", "tram", "rail".
@@ -72,7 +83,7 @@ def distance_matrix(client, origins, destinations,
     :type transit_mode: string or list of strings
 
     :param transit_routing_preference: Specifies preferences for transit
-        requests. Valid values are "less_walking" or "fewer_transfers".
+        requests. Valid values are "less_walking" or "fewer_transfers"
     :type transit_routing_preference: string
 
     :param traffic_model: Specifies the predictive travel time model to use.
@@ -80,14 +91,14 @@ def distance_matrix(client, origins, destinations,
         The traffic_model parameter may only be specified for requests where
         the travel mode is driving, and where the request includes a
         departure_time.
+    :type units: string
 
-    :rtype: matrix of distances. Results are returned in rows, each row
-        containing one origin paired with each destination.
+    :rtype: list of routes
     """
 
     params = {
-        "origins": convert.location_list(origins),
-        "destinations": convert.location_list(destinations)
+        "origin": convert.latlng(origin),
+        "destination": convert.latlng(destination)
     }
 
     if mode:
@@ -97,16 +108,26 @@ def distance_matrix(client, origins, destinations,
             raise ValueError("Invalid travel mode.")
         params["mode"] = mode
 
+    if waypoints:
+        waypoints = convert.location_list(waypoints)
+        if optimize_waypoints:
+            waypoints = "optimize:true|" + waypoints
+        params["waypoints"] = waypoints
+
+    if alternatives:
+        params["alternatives"] = "true"
+
+    if avoid:
+        params["avoid"] = convert.join_list("|", avoid)
+
     if language:
         params["language"] = language
 
-    if avoid:
-        if avoid not in ["tolls", "highways", "ferries"]:
-            raise ValueError("Invalid route restriction.")
-        params["avoid"] = avoid
-
     if units:
         params["units"] = units
+
+    if region:
+        params["region"] = region
 
     if departure_time:
         params["departure_time"] = convert.time(departure_time)
@@ -127,4 +148,4 @@ def distance_matrix(client, origins, destinations,
     if traffic_model:
         params["traffic_model"] = traffic_model
 
-    return client._request("/maps/api/distancematrix/json", params)
+    return await client._request("/maps/api/directions/json", params)["routes"]

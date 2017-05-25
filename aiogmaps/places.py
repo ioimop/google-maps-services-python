@@ -17,20 +17,21 @@
 
 """Performs requests to the Google Places API."""
 
-from googlemaps import convert
+from aiogmaps import convert
 
 
-def places(client, query, location=None, radius=None, language=None,
-           min_price=None, max_price=None, open_now=False, type=None,
-           page_token=None):
+async def places(client, query, location=None, radius=None, language=None,
+                 min_price=None, max_price=None, open_now=False, type=None,
+                 page_token=None):
     """
     Places search.
 
-    :param query: The text string on which to search, for example: "restaurant".
+    :param query: The text string on which to search, for example:
+        "restaurant".
     :type query: string
 
-    :param location: The latitude/longitude value for which you wish to obtain the
-        closest, human-readable address.
+    :param location: The latitude/longitude value for which you wish to obtain
+        the closest, human-readable address.
     :type location: string, dict, list, or tuple
 
     :param radius: Distance in meters within which to bias results.
@@ -40,8 +41,8 @@ def places(client, query, location=None, radius=None, language=None,
     :type langauge: string
 
     :param min_price: Restricts results to only those places with no less than
-        this price level. Valid values are in the range from 0 (most affordable)
-        to 4 (most expensive).
+        this price level. Valid values are in the range from 0
+        (most affordable) to 4 (most expensive).
     :type min_price: int
 
     :param max_price: Restricts results to only those places with no greater
@@ -67,20 +68,22 @@ def places(client, query, location=None, radius=None, language=None,
         html_attributions: set of attributions which must be displayed
         next_page_token: token for retrieving the next page of results
     """
-    return _places(client, "text", query=query, location=location,
-                   radius=radius, language=language, min_price=min_price,
-                   max_price=max_price, open_now=open_now, type=type,
-                   page_token=page_token)
+    return await _places(client, "text", query=query, location=location,
+                         radius=radius, language=language, min_price=min_price,
+                         max_price=max_price, open_now=open_now, type=type,
+                         page_token=page_token)
 
 
-def places_nearby(client, location, radius=None, keyword=None, language=None,
-                  min_price=None, max_price=None, name=None, open_now=False,
-                  rank_by=None, type=None, page_token=None):
+async def places_nearby(
+    client, location, radius=None, keyword=None, language=None,
+    min_price=None, max_price=None, name=None, open_now=False,
+    rank_by=None, type=None, page_token=None
+):
     """
     Performs nearby search for places.
 
-    :param location: The latitude/longitude value for which you wish to obtain the
-                     closest, human-readable address.
+    :param location: The latitude/longitude value for which you wish to obtain
+                     the closest, human-readable address.
     :type location: string, dict, list, or tuple
 
     :param radius: Distance in meters within which to bias results.
@@ -132,25 +135,27 @@ def places_nearby(client, location, radius=None, keyword=None, language=None,
     """
     if rank_by == "distance":
         if not (keyword or name or type):
-          raise ValueError("either a keyword, name, or type arg is required "
-                           "when rank_by is set to distance")
+            raise ValueError("either a keyword, name, or type arg is required "
+                             "when rank_by is set to distance")
         elif radius is not None:
-          raise ValueError("radius cannot be specified when rank_by is set to "
-                           "distance")
+            raise ValueError("radius cannot be specified when rank_by is set "
+                             "to distance")
 
-    return _places(client, "nearby", location=location, radius=radius,
-                   keyword=keyword, language=language, min_price=min_price,
-                   max_price=max_price, name=name, open_now=open_now,
-                   rank_by=rank_by, type=type, page_token=page_token)
+    return await _places(
+        client, "nearby", location=location, radius=radius,
+        keyword=keyword, language=language, min_price=min_price,
+        max_price=max_price, name=name, open_now=open_now,
+        rank_by=rank_by, type=type, page_token=page_token
+    )
 
 
-def places_radar(client, location, radius, keyword=None, min_price=None,
-                 max_price=None, name=None, open_now=False, type=None):
+async def places_radar(client, location, radius, keyword=None, min_price=None,
+                       max_price=None, name=None, open_now=False, type=None):
     """
     Performs radar search for places.
 
-    :param location: The latitude/longitude value for which you wish to obtain the
-                     closest, human-readable address.
+    :param location: The latitude/longitude value for which you wish to obtain
+                     the closest, human-readable address.
     :type location: string, dict, list, or tuple
 
     :param radius: Distance in meters within which to bias results.
@@ -191,14 +196,18 @@ def places_radar(client, location, radius, keyword=None, min_price=None,
     if not (keyword or name or type):
         raise ValueError("either a keyword, name, or type arg is required")
 
-    return _places(client, "radar", location=location, radius=radius,
-                   keyword=keyword, min_price=min_price, max_price=max_price,
-                   name=name, open_now=open_now, type=type)
+    return await _places(
+        client, "radar", location=location, radius=radius,
+        keyword=keyword, min_price=min_price, max_price=max_price,
+        name=name, open_now=open_now, type=type
+    )
 
 
-def _places(client, url_part, query=None, location=None, radius=None,
-            keyword=None, language=None, min_price=0, max_price=4, name=None,
-            open_now=False, rank_by=None, type=None, page_token=None):
+async def _places(
+    client, url_part, query=None, location=None, radius=None,
+    keyword=None, language=None, min_price=0, max_price=4, name=None,
+    open_now=False, rank_by=None, type=None, page_token=None
+):
     """
     Internal handler for ``places``, ``places_nearby``, and ``places_radar``.
     See each method's docs for arg details.
@@ -228,10 +237,10 @@ def _places(client, url_part, query=None, location=None, radius=None,
         params["pagetoken"] = page_token
 
     url = "/maps/api/place/%ssearch/json" % url_part
-    return client._request(url, params)
+    return await client._request(url, params)
 
 
-def place(client, place_id, language=None):
+async def place(client, place_id, language=None):
     """
     Comprehensive details for an individual place.
 
@@ -249,10 +258,11 @@ def place(client, place_id, language=None):
     params = {"placeid": place_id}
     if language:
         params["language"] = language
-    return client._request("/maps/api/place/details/json", params)
+    return await client._request("/maps/api/place/details/json", params)
 
 
-def places_photo(client, photo_reference, max_width=None, max_height=None):
+async def places_photo(client, photo_reference, max_width=None,
+                       max_height=None):
     """
     Downloads a photo from the Places API.
 
@@ -291,15 +301,15 @@ def places_photo(client, photo_reference, max_width=None, max_height=None):
     # "extract_body" and "stream" args here are used to return an iterable
     # response containing the image file data, rather than converting from
     # json.
-    response = client._request("/maps/api/place/photo", params,
-                           extract_body=lambda response: response,
-                           requests_kwargs={"stream": True})
-    return response.iter_content()
+    response = await client._request("/maps/api/place/photo", params,
+                                     extract_body=lambda response: response,
+                                     requests_kwargs={"stream": True})
+    return response.content
 
 
-def places_autocomplete(client, input_text, offset=None, location=None,
-                        radius=None, language=None, type=None,
-                        components=None):
+async def places_autocomplete(client, input_text, offset=None, location=None,
+                              radius=None, language=None, type=None,
+                              components=None):
     """
     Returns Place predictions given a textual search string and optional
     geographic bounds.
@@ -313,8 +323,8 @@ def places_autocomplete(client, input_text, offset=None, location=None,
                    service will match on 'Goo'.
     :type offset: int
 
-    :param location: The latitude/longitude value for which you wish to obtain the
-                     closest, human-readable address.
+    :param location: The latitude/longitude value for which you wish to obtain
+                     the closest, human-readable address.
     :type location: string, dict, list, or tuple
 
     :param radius: Distance in meters within which to bias results.
@@ -328,21 +338,24 @@ def places_autocomplete(client, input_text, offset=None, location=None,
         https://developers.google.com/places/web-service/autocomplete#place_types
     :type type: string
 
-    :param components: A component filter for which you wish to obtain a geocode,
-                       for example:
-                       ``{'administrative_area': 'TX','country': 'US'}``
+    :param components: A component filter for which you wish to obtain a
+        geocode, for example:
+        ``{'administrative_area': 'TX','country': 'US'}``
     :type components: dict
 
     :rtype: list of predictions
 
     """
-    return _autocomplete(client, "", input_text, offset=offset,
-                         location=location, radius=radius, language=language,
-                         type=type, components=components)
+    return await _autocomplete(
+        client, "", input_text, offset=offset,
+        location=location, radius=radius, language=language,
+        type=type, components=components
+    )
 
 
-def places_autocomplete_query(client, input_text, offset=None, location=None,
-                              radius=None, language=None):
+async def places_autocomplete_query(
+    client, input_text, offset=None, location=None, radius=None, language=None
+):
     """
     Returns Place predictions given a textual search query, such as
     "pizza near New York", and optional geographic bounds.
@@ -355,8 +368,8 @@ def places_autocomplete_query(client, input_text, offset=None, location=None,
         is 'Google' and the offset is 3, the service will match on 'Goo'.
     :type offset: int
 
-    :param location: The latitude/longitude value for which you wish to obtain the
-        closest, human-readable address.
+    :param location: The latitude/longitude value for which you wish to obtain
+        the closest, human-readable address.
     :type location: string, dict, list, or tuple
 
     :param radius: Distance in meters within which to bias results.
@@ -367,12 +380,15 @@ def places_autocomplete_query(client, input_text, offset=None, location=None,
 
     :rtype: list of predictions
     """
-    return _autocomplete(client, "query", input_text, offset=offset,
-                         location=location, radius=radius, language=language)
+    return await _autocomplete(
+        client, "query", input_text, offset=offset,
+        location=location, radius=radius, language=language)
 
 
-def _autocomplete(client, url_part, input_text, offset=None, location=None,
-                  radius=None, language=None, type=None, components=None):
+async def _autocomplete(
+    client, url_part, input_text, offset=None, location=None,
+    radius=None, language=None, type=None, components=None
+):
     """
     Internal handler for ``autocomplete`` and ``autocomplete_query``.
     See each method's docs for arg details.
@@ -394,4 +410,4 @@ def _autocomplete(client, url_part, input_text, offset=None, location=None,
         params["components"] = convert.components(components)
 
     url = "/maps/api/place/%sautocomplete/json" % url_part
-    return client._request(url, params)["predictions"]
+    return await client._request(url, params)["predictions"]

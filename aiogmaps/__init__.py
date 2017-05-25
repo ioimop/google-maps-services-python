@@ -17,8 +17,8 @@
 
 __version__ = "2.4.6-dev"
 
-from googlemaps.client import Client
-import googlemaps.exceptions
+from aiogmaps.client import Client
+import aiogmaps.exceptions
 
 # Allow sphinx to pick up these symbols for the documentation.
 __all__ = ["Client"]

@@ -18,7 +18,7 @@
 """Tests for the roads module."""
 
 
-import googlemaps
+import aiogmaps
 
 import responses
 import test as _test
@@ -27,7 +27,7 @@ class RoadsTest(_test.TestCase):
 
     def setUp(self):
         self.key = "AIzaasdf"
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_snap(self):
@@ -108,7 +108,7 @@ class RoadsTest(_test.TestCase):
                          responses.calls[0].request.url)
 
     def test_clientid_not_accepted(self):
-        client = googlemaps.Client(client_id="asdf", client_secret="asdf")
+        client = aiogmaps.Client(client_id="asdf", client_secret="asdf")
 
         with self.assertRaises(ValueError):
             client.speed_limits("foo")

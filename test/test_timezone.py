@@ -22,7 +22,7 @@ import responses
 import mock
 import datetime
 
-import googlemaps
+import aiogmaps
 import test as _test
 
 
@@ -30,7 +30,7 @@ class TimezoneTest(_test.TestCase):
 
     def setUp(self):
         self.key = "AIzaasdf"
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_los_angeles(self):
@@ -58,7 +58,7 @@ class TimezoneTest(_test.TestCase):
         utcnow = now
 
     @responses.activate
-    @mock.patch("googlemaps.timezone.datetime", MockDatetime())
+    @mock.patch("aiogmaps.timezone.datetime", MockDatetime())
     def test_los_angeles_with_no_timestamp(self):
         responses.add(responses.GET,
                       "https://maps.googleapis.com/maps/api/timezone/json",

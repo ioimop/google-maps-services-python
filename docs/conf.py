@@ -49,7 +49,7 @@ copyright = u'%s, Google Inc.' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-from googlemaps import __version__
+from aiogmaps import __version__
 version = __version__
 # The full version, including alpha/beta/rc tags.
 release = version

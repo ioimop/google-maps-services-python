@@ -17,10 +17,10 @@
 
 """Performs requests to the Google Maps Elevation API."""
 
-from googlemaps import convert
+from aiogmaps import convert
 
 
-def elevation(client, locations):
+async def elevation(client, locations):
     """
     Provides elevation data for locations provided on the surface of the
     earth, including depth locations on the ocean floor (which return negative
@@ -34,10 +34,10 @@ def elevation(client, locations):
     :rtype: list of elevation data responses
     """
     params = {"locations": convert.shortest_path(locations)}
-    return client._request("/maps/api/elevation/json", params)["results"]
+    return await client._request("/maps/api/elevation/json", params)["results"]
 
 
-def elevation_along_path(client, path, samples):
+async def elevation_along_path(client, path, samples):
     """
     Provides elevation data sampled along a path on the surface of the earth.
 
@@ -62,4 +62,4 @@ def elevation_along_path(client, path, samples):
         "samples": samples
     }
 
-    return client._request("/maps/api/elevation/json", params)["results"]
+    return await client._request("/maps/api/elevation/json", params)["results"]

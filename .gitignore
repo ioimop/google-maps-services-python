@@ -31,6 +31,6 @@ dist/
 .tox
 env
 nosetests.xml
-googlemaps.egg-info
+aiogmaps.egg-info
 *.egg
 

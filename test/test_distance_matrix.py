@@ -20,7 +20,7 @@
 from datetime import datetime
 import time
 
-import googlemaps
+import aiogmaps
 import responses
 import test as _test
 
@@ -28,7 +28,7 @@ class DistanceMatrixTest(_test.TestCase):
 
     def setUp(self):
         self.key = 'AIzaasdf'
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_basic_params(self):

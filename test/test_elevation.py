@@ -20,14 +20,14 @@
 import datetime
 import responses
 
-import googlemaps
+import aiogmaps
 import test as _test
 
 class ElevationTest(_test.TestCase):
 
     def setUp(self):
         self.key = 'AIzaasdf'
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_elevation_single(self):
@@ -76,7 +76,7 @@ class ElevationTest(_test.TestCase):
                             responses.calls[0].request.url)
 
     def test_elevation_along_path_single(self):
-        with self.assertRaises(googlemaps.exceptions.ApiError):
+        with self.assertRaises(aiogmaps.exceptions.ApiError):
             results = self.client.elevation_along_path(
                     [(40.714728, -73.998672)], 5)
 

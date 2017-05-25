@@ -20,7 +20,7 @@
 import datetime
 import unittest
 
-from googlemaps import convert
+from aiogmaps import convert
 
 
 class ConvertTest(unittest.TestCase):

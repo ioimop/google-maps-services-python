@@ -17,8 +17,8 @@
 
 """Performs requests to the Google Maps Roads API."""
 
-import googlemaps
-from googlemaps import convert
+import aiogmaps
+from aiogmaps import convert
 
 
 _ROADS_BASE_URL = "https://roads.googleapis.com"
@@ -123,9 +123,9 @@ def _roads_extract(resp):
         j = resp.json()
     except:
         if resp.status_code != 200:
-            raise googlemaps.exceptions.HTTPError(resp.status_code)
+            raise aiogmaps.exceptions.HTTPError(resp.status_code)
 
-        raise googlemaps.exceptions.ApiError("UNKNOWN_ERROR",
+        raise aiogmaps.exceptions.ApiError("UNKNOWN_ERROR",
                                              "Received a malformed response.")
 
     if "error" in j:
@@ -133,14 +133,14 @@ def _roads_extract(resp):
         status = error["status"]
 
         if status == "RESOURCE_EXHAUSTED":
-            raise googlemaps.exceptions._RetriableRequest()
+            raise aiogmaps.exceptions._RetriableRequest()
 
         if "message" in error:
-            raise googlemaps.exceptions.ApiError(status, error["message"])
+            raise aiogmaps.exceptions.ApiError(status, error["message"])
         else:
-            raise googlemaps.exceptions.ApiError(status)
+            raise aiogmaps.exceptions.ApiError(status)
 
     if resp.status_code != 200:
-        raise googlemaps.exceptions.HTTPError(resp.status_code)
+        raise aiogmaps.exceptions.HTTPError(resp.status_code)
 
     return j

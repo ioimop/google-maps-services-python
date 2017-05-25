@@ -1,18 +1,18 @@
 Python Client for Google Maps Services
 ======================================
 
-:mod:`googlemaps` Module
+:mod:`aiogmaps` Module
 ------------------------
 
-.. automodule:: googlemaps
+.. automodule:: aiogmaps
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`googlemaps.exceptions` Module
+:mod:`aiogmaps.exceptions` Module
 -----------------------------------
 
-.. automodule:: googlemaps.exceptions
+.. automodule:: aiogmaps.exceptions
     :members:
     :undoc-members:
     :show-inheritance:

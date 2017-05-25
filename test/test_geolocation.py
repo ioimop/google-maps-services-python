@@ -21,13 +21,13 @@
 import responses
 
 import test as _test
-import googlemaps
+import aiogmaps
 
 class GeolocationTest(_test.TestCase):
 
     def setUp(self):
         self.key = 'AIzaasdf'
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
 
     @responses.activate
     def test_simple_geolocate(self):

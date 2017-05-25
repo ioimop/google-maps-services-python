@@ -23,14 +23,14 @@ from types import GeneratorType
 import responses
 
 import test as _test
-import googlemaps
+import aiogmaps
 
 
 class PlacesTest(_test.TestCase):
 
     def setUp(self):
         self.key = 'AIzaasdf'
-        self.client = googlemaps.Client(self.key)
+        self.client = aiogmaps.Client(self.key)
         self.location = (-33.86746, 151.207090)
         self.type = 'liquor_store'
         self.language = 'en-AU'
