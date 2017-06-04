@@ -53,7 +53,7 @@ class Client(object):
 
     def __init__(self, key=None, client_id=None, client_secret=None,
                  timeout=None, connect_timeout=None, read_timeout=None,
-                 retry_timeout=60, requests_kwargs=None,
+                 request=None, retry_timeout=60, requests_kwargs=None,
                  queries_per_second=10, channel=None):
         """
         :param key: Maps API key. Required, unless "client_id" and
@@ -126,7 +126,7 @@ class Client(object):
                     "and hyphen (-) characters are allowed."
                 )
 
-        # self.session = aiohttp.ClientSession()
+        self.session = request
         self.key = key
 
         if timeout and (connect_timeout or read_timeout):
@@ -152,7 +152,7 @@ class Client(object):
         self.requests_kwargs.update({
             "headers": {"User-Agent": _USER_AGENT},
             "timeout": self.timeout,
-            "verify": True,  # NOTE(cbro): verify SSL certs.
+            # "verify": True,  # NOTE(cbro): verify SSL certs.
         })
 
         self.queries_per_second = queries_per_second
@@ -227,11 +227,10 @@ class Client(object):
         final_requests_kwargs = dict(self.requests_kwargs, **requests_kwargs)
 
         # Determine GET/POST.
-        async with aiohttp.ClientSession() as session:
-            requests_method = session.get
-            if post_json is not None:
-                requests_method = self.session.post
-                final_requests_kwargs["json"] = post_json
+        requests_method = self.session.get
+        if post_json is not None:
+            requests_method = self.session.post
+            final_requests_kwargs["json"] = post_json
 
         try:
             response = await requests_method(
@@ -242,7 +241,7 @@ class Client(object):
         except Exception as e:
             raise aiogmaps.exceptions.TransportError(e)
 
-        if response.status_code in _RETRIABLE_STATUSES:
+        if response.status in _RETRIABLE_STATUSES:
             # Retry request.
             return await self._request(
                 url, params, first_request_time, retry_counter + 1, base_url,
@@ -274,7 +273,8 @@ class Client(object):
 
     async def _get_body(self, response):
         if response.status != 200:
-            raise aiogmaps.exceptions.HTTPError(response.status)
+            raise aiogmaps.exceptions.HTTPError(
+                response.status, await response.content.read())
 
         body = await response.json()
 

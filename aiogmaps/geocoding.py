@@ -65,7 +65,7 @@ async def geocode(client, address=None, components=None, bounds=None,
     if language:
         params["language"] = language
 
-    return await client._request("/maps/api/geocode/json", params)["results"]
+    return (await client._request("/maps/api/geocode/json", params))["results"]
 
 
 async def reverse_geocode(client, latlng, result_type=None, location_type=None,

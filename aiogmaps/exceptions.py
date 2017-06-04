@@ -45,11 +45,12 @@ class TransportError(Exception):
 
 class HTTPError(TransportError):
     """An unexpected HTTP error occurred."""
-    def __init__(self, status_code):
+    def __init__(self, status_code, body=''):
         self.status_code = status_code
+        self.body = body
 
     def __str__(self):
-        return "HTTP Error: %d" % self.status_code
+        return "HTTP Error: %d, %s" % self.status_code, self.body
 
 class Timeout(Exception):
     """The request timed out."""
